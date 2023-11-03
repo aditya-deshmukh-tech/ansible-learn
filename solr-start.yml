@@ -1,0 +1,33 @@
+---
+- name: Install and Start Solr on Windows
+  hosts: your_windows_host
+  tasks:
+    - name: Download Solr
+      win_get_url:
+        url: https://archive.apache.org/dist/lucene/solr/8.11.1/solr-8.11.1.zip
+        dest: C:\temp\solr.zip
+
+    - name: Unzip Solr
+      win_unzip:
+        src: C:\temp\solr.zip
+        dest: C:\solr
+      environment:
+        PATH: "{{ ansible_env.PATH }};C:\Program Files\7-Zip"
+
+    - name: Start Solr Service
+      win_command: C:\solr\bin\solr.cmd start -p 8983
+      async: 1800
+      poll: 0
+      register: solr_start_result
+
+    - name: Wait for Solr to Start
+      async_status:
+        jid: "{{ solr_start_result.ansible_job_id }}"
+      register: solr_start_status
+      until: solr_start_status.finished
+      retries: 60
+      delay: 10
+
+    - name: Print Solr Status
+      debug:
+        var: solr_start_status
